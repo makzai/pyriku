@@ -65,7 +65,7 @@ def worker():
         time.sleep(1)
 
     global timer
-    timer = threading.Timer(60*1, worker)
+    timer = threading.Timer(60*10, worker)
     timer.start()
 
 
