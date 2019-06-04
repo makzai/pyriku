@@ -22,6 +22,13 @@ conn.select_db('riku')
 # 根据SPU批量拉
 shop = 'selfridges'
 
+logger = logging.getLogger(shop)
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('./log/info.log')
+logger.addHandler(fh)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+
 
 def get_data(spuCode):
     headers = {'Api-Key': 'xjut2p34999bad9dx7y868ng'}
@@ -31,12 +38,6 @@ def get_data(spuCode):
 
 
 def worker():
-    logger = logging.getLogger('mylogger')
-    logger.setLevel(logging.DEBUG)
-    fh = logging.FileHandler('./log/info.log')
-    logger.addHandler(fh)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fh.setFormatter(formatter)
     logger.info('working...')
     cursor.execute("SELECT * FROM products WHERE shop_name = '%s' GROUP BY spu_code" % shop)
     if cursor.rowcount > 0:
