@@ -1,23 +1,9 @@
 import requests
-import pymysql
 import time
 import datetime
 import threading
 import logging
-
-config = {
-    'host': '47.103.20.2',
-    'port': 3306,
-    'user': 'riku',
-    'passwd': 'riku0806',
-    'charset': 'utf8mb4',
-    'cursorclass': pymysql.cursors.DictCursor
-}
-
-conn = pymysql.connect(**config)
-conn.autocommit(1)
-cursor = conn.cursor()
-conn.select_db('riku')
+import db
 
 # 根据SPU批量拉
 shop = 'selfridges'
@@ -39,30 +25,39 @@ def get_data(spuCode):
 
 def worker():
     logger.info('working...')
-    cursor.execute("SELECT * FROM products WHERE shop_name = '%s' GROUP BY spu_code" % shop)
-    if cursor.rowcount > 0:
-        results = cursor.fetchall()
-        for r in results:
-            spuCode = r['spu_code']
-            print(spuCode)
-            j = get_data(spuCode)
-            for i in j['stocks']:
-                print('SKUID:'+i['SKUID']+' , STOCK:'+i['Stock Quantity Available to Purchase'])
-                if int(i['Stock Quantity Available to Purchase']) > 0:
-                    cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s' LIMIT 1" % (shop, spuCode, i['SKUID']))
-                    if cursor.rowcount > 0:
-                        result = cursor.fetchone()
-                        if result['stock'] == 0:
-                            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            cursor.execute(
-                                "UPDATE products SET value = '%s', stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s' LIMIT 1" %
-                                (i['Stock Quantity Available to Purchase'], 1, now, shop, spuCode, i['SKUID']))
-                        else:
-                            cursor.execute(
-                                "UPDATE products SET value = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s' LIMIT 1" %
-                                (i['Stock Quantity Available to Purchase'], shop, spuCode, i['SKUID']))
-                time.sleep(0.1)
-        time.sleep(1)
+    db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' GROUP BY spu_code" % shop)
+    if db.cursor.rowcount > 0:
+        products = db.cursor.fetchall()
+        for r in products:
+            spu_code = r['spu_code']
+            j = get_data(spu_code)
+            print(j)
+            db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
+            if db.cursor.rowcount > 0:
+                skus = db.cursor.fetchall()
+                for s in skus:
+                    zero = 1
+                    for i in j['stocks']:
+                        if i['SKUID'] == s['sku_code']:
+                            if int(i['Stock Quantity Available to Purchase']) > 0:
+                                zero = 0
+                                if s['stock'] == 0:
+                                    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    db.cursor.execute(
+                                        "UPDATE products SET value = '%s', stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                        (i['Stock Quantity Available to Purchase'], 1, now, shop, spu_code, s['sku_code']))
+                                else:
+                                    db.cursor.execute(
+                                        "UPDATE products SET value = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                        (i['Stock Quantity Available to Purchase'], shop, spu_code, s['sku_code']))
+                            break
+                    # 兜底stock回0
+                    if zero == 1:
+                        db.cursor.execute(
+                            "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                            (0, 0, shop, spu_code, s['sku_code']))
+
+                time.sleep(1)
 
     global timer
     timer = threading.Timer(60*10, worker)
