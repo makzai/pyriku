@@ -38,13 +38,13 @@ def worker():
                     zero = 1
                     for i in j['regularChildSkus']:
                         if i['skuId'] == s['sku_code']:
+                            logger.info(i['skuId'])
                             zero = 0
                             if s['stock'] == 0:
                                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 db.cursor.execute(
                                     "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
                                     (1, now, shop, spu_code, s['sku_code']))
-
                             break
                     # 兜底stock回0
                     if zero == 1:
