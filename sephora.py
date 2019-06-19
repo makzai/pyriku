@@ -4,6 +4,7 @@ import datetime
 import threading
 import logging
 import db
+import pytz
 
 # 根据SPU批量拉
 shop = 'sephora'
@@ -15,6 +16,7 @@ logger.addHandler(fh)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 
+tz = pytz.timezone("Asia/Shanghai")
 
 def get_data(spuCode):
     r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode)
@@ -40,7 +42,7 @@ def worker():
                     if j['currentSku']['skuId'] == s['sku_code']:
                         if j['currentSku']['actionFlags']['isAddToBasket']:
                             if s['stock'] == 0:
-                                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                 db.cursor.execute(
                                     "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
                                     (1, now, shop, spu_code, s['sku_code']))
@@ -57,7 +59,7 @@ def worker():
                             zero = 0
                             if i['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
-                                    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
                                         "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
                                         (1, now, shop, spu_code, s['sku_code']))
