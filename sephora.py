@@ -39,7 +39,7 @@ def worker():
 
                     # currentSku
                     if j['currentSku']['skuId'] == s['sku_code']:
-                        if j['currentSku']['skuId']['actionFlags']['isAddToBasket']:
+                        if j['currentSku']['actionFlags']['isAddToBasket']:
                             if s['stock'] == 0:
                                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 db.cursor.execute(
