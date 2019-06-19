@@ -29,19 +29,17 @@ def worker():
         products = db.cursor.fetchall()
         for r in products:
             spu_code = r['spu_code']
+            logger.info('handling...' + r['spu_code'])
             j = get_data(spu_code)
             print(j)
             db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
             if db.cursor.rowcount > 0:
                 skus = db.cursor.fetchall()
                 for s in skus:
-                    logger.info('handling...'+s['sku_code'])
-
                     # currentSku
                     if j['currentSku']['skuId'] == s['sku_code']:
                         if j['currentSku']['actionFlags']['isAddToBasket']:
                             if s['stock'] == 0:
-                                logger.info('set currentSku...' + s['sku_code'])
                                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 db.cursor.execute(
                                     "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
@@ -59,7 +57,6 @@ def worker():
                             zero = 0
                             if i['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
-                                    logger.info('set regularChildSkus...' + s['sku_code'])
                                     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
                                         "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
