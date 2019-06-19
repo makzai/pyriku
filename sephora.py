@@ -18,6 +18,7 @@ fh.setFormatter(formatter)
 
 tz = pytz.timezone("Asia/Shanghai")
 
+
 def get_data(spuCode):
     r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode)
     j = r.json()
@@ -33,7 +34,7 @@ def worker():
             spu_code = r['spu_code']
             logger.info('handling...' + r['spu_code'])
             j = get_data(spu_code)
-            print(j)
+            # print(j)
             db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
             if db.cursor.rowcount > 0:
                 skus = db.cursor.fetchall()
