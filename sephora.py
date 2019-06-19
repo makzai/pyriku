@@ -49,7 +49,7 @@ def worker():
                             db.cursor.execute(
                                 "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
                                 (0, 0, shop, spu_code, s['sku_code']))
-                        break
+                        continue
 
                     # regularChildSkus
                     zero = 1
