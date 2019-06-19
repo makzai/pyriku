@@ -41,6 +41,7 @@ def worker():
                     if j['currentSku']['skuId'] == s['sku_code']:
                         if j['currentSku']['actionFlags']['isAddToBasket']:
                             if s['stock'] == 0:
+                                logger.info('set currentSku...' + s['sku_code'])
                                 now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 db.cursor.execute(
                                     "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
@@ -58,6 +59,7 @@ def worker():
                             zero = 0
                             if i['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
+                                    logger.info('set regularChildSkus...' + s['sku_code'])
                                     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
                                         "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
