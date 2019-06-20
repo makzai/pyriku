@@ -25,13 +25,13 @@ def get_data(spuCode):
 
         # http状态
         if r.status_code != requests.codes.ok:
-            logger.error(spuCode+' request status code:'+r.status_code)
+            logger.error(spuCode+" request status code:%s" % r.status_code)
             return {}
 
         j = r.json()
         # 接口错误
         if 'errorCode' in j.keys():
-            logger.error(spuCode+' error code:'+j['errorCode'])
+            logger.error(spuCode+" error code:%s" % j['errorCode'])
             return {}
 
         return j
