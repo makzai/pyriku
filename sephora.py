@@ -22,6 +22,10 @@ tz = pytz.timezone("Asia/Shanghai")
 def get_data(spuCode):
     try:
         r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode, timeout=5)
+        if r.status_code != requests.codes.ok:
+            logger.error(spuCode+' request status code:'+r.status_code)
+            return {}
+
         j = r.json()
         return j
     except requests.exceptions.RequestException as e:
@@ -39,7 +43,7 @@ def worker():
             logger.info('handling...' + r['spu_code'])
             j = get_data(spu_code)
             if len(j) == 0:
-                logger.info('nothing in ' + r['spu_code'])
+                logger.info('err in ' + r['spu_code'])
                 continue
             # print(j)
             db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
