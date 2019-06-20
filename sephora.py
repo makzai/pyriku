@@ -20,9 +20,13 @@ tz = pytz.timezone("Asia/Shanghai")
 
 
 def get_data(spuCode):
-    r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode)
-    j = r.json()
-    return j
+    try:
+        r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode, timeout=5)
+        j = r.json()
+        return j
+    except requests.exceptions.RequestException as e:
+        logger.error(e)
+        return {}
 
 
 def worker():
@@ -34,48 +38,58 @@ def worker():
             spu_code = r['spu_code']
             logger.info('handling...' + r['spu_code'])
             j = get_data(spu_code)
+            if len(j) == 0:
+                logger.info('nothing in ' + r['spu_code'])
+                continue
             # print(j)
             db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
             if db.cursor.rowcount > 0:
                 skus = db.cursor.fetchall()
                 for s in skus:
                     # currentSku
-                    if j['currentSku']['skuId'] == s['sku_code']:
-                        if j['currentSku']['actionFlags']['isAddToBasket']:
-                            if s['stock'] == 0:
-                                now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-                                db.cursor.execute(
-                                    "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
-                                    (1, now, shop, spu_code, s['sku_code']))
-                        else:
-                            db.cursor.execute(
-                                "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
-                                (0, 0, shop, spu_code, s['sku_code']))
-                        continue
-
-                    # regularChildSkus
-                    zero = 1
-                    for i in j['regularChildSkus']:
-                        if i['skuId'] == s['sku_code']:
-                            zero = 0
-                            if i['actionFlags']['isAddToBasket']:
+                    if 'currentSku' in j.keys():
+                        if j['currentSku']['skuId'] == s['sku_code']:
+                            if j['currentSku']['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
                                     now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
                                         "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
                                         (1, now, shop, spu_code, s['sku_code']))
-                            break
+                            else:
+                                if s['stock'] == 1:
+                                    db.cursor.execute(
+                                        "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                        (0, 0, shop, spu_code, s['sku_code']))
+                            continue
+
+                    set_zero = 1
+                    # regularChildSkus
+                    if 'regularChildSkus' in j.keys():
+                        for i in j['regularChildSkus']:
+                            if i['skuId'] == s['sku_code']:
+                                set_zero = 0
+                                if i['actionFlags']['isAddToBasket']:
+                                    if s['stock'] == 0:
+                                        now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+                                        db.cursor.execute(
+                                            "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                            (1, now, shop, spu_code, s['sku_code']))
+                                else:
+                                    if s['stock'] == 1:
+                                        db.cursor.execute(
+                                            "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                            (0, 0, shop, spu_code, s['sku_code']))
+                                break
 
                     # 没返回兜底stock回0
-                    if zero == 1:
-                        db.cursor.execute(
-                            "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
-                            (0, 0, shop, spu_code, s['sku_code']))
-
-                time.sleep(1)
+                    if set_zero == 1:
+                        if s['stock'] == 1:
+                            db.cursor.execute(
+                                "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                (0, 0, shop, spu_code, s['sku_code']))
 
     global timer
-    timer = threading.Timer(60*10, worker)
+    timer = threading.Timer(60*3, worker)
     timer.start()
 
 

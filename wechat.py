@@ -31,8 +31,8 @@ def worker():
             msg += m
 
         author.send(msg)
-
-    logger.info('nothing happen...')
+    else:
+        logger.info('nothing happen...')
 
     global timer
     timer = threading.Timer(60*interval, worker)
