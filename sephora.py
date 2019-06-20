@@ -22,11 +22,18 @@ tz = pytz.timezone("Asia/Shanghai")
 def get_data(spuCode):
     try:
         r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode, timeout=5)
+
+        # http状态
         if r.status_code != requests.codes.ok:
             logger.error(spuCode+' request status code:'+r.status_code)
             return {}
 
         j = r.json()
+        # 接口错误
+        if 'errorCode' in j.keys():
+            logger.error(spuCode+' error code:'+j['errorCode'])
+            return {}
+
         return j
     except requests.exceptions.RequestException as e:
         logger.error(e)
