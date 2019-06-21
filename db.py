@@ -1,10 +1,10 @@
 import pymysql
 
 config = {
-    'host': '47.103.20.2',
+    'host': '47.240.41.82',
     'port': 3306,
-    'user': 'riku',
-    'passwd': 'riku0806',
+    'user': 'root',
+    'passwd': 'kkriku',
     'charset': 'utf8mb4',
     'cursorclass': pymysql.cursors.DictCursor
 }
