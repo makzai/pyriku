@@ -1,10 +1,11 @@
 import requests
-import time
 import datetime
 import threading
 import logging
 import db
 import pytz
+import mq
+import json
 
 # 根据SPU批量拉
 shop = 'sephora'
@@ -17,6 +18,11 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 fh.setFormatter(formatter)
 
 tz = pytz.timezone("Asia/Shanghai")
+
+channel = mq.connection.channel()
+channel.queue_declare('miffy_queue')
+exchange = ''
+routing_key = 'miffy_queue'
 
 
 def get_data(spuCode):
@@ -62,6 +68,10 @@ def worker():
                         if j['currentSku']['skuId'] == s['sku_code']:
                             if j['currentSku']['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
+                                    # 突然有货
+                                    body = json.dumps(s)
+                                    channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
+
                                     now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
                                         "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
@@ -81,6 +91,10 @@ def worker():
                                 set_zero = 0
                                 if i['actionFlags']['isAddToBasket']:
                                     if s['stock'] == 0:
+                                        # 突然有货
+                                        body = json.dumps(s)
+                                        channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
+
                                         now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                         db.cursor.execute(
                                             "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
