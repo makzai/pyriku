@@ -6,6 +6,7 @@ import db
 import pytz
 import mq
 import json
+import jsonext
 
 # 根据SPU批量拉
 shop = 'sephora'
@@ -28,7 +29,6 @@ routing_key = 'miffy_queue'
 def get_data(spuCode):
     try:
         r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode, timeout=5)
-
         # http状态
         if r.status_code != requests.codes.ok:
             logger.error(spuCode+" request status code:%s" % r.status_code)
@@ -69,7 +69,7 @@ def worker():
                             if j['currentSku']['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
                                     # 突然有货
-                                    body = json.dumps(s)
+                                    body = json.dumps(s, cls=jsonext.DateEncoder)
                                     channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
 
                                     now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
@@ -92,7 +92,7 @@ def worker():
                                 if i['actionFlags']['isAddToBasket']:
                                     if s['stock'] == 0:
                                         # 突然有货
-                                        body = json.dumps(s)
+                                        body = json.dumps(s, cls=jsonext.DateEncoder)
                                         channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
 
                                         now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
