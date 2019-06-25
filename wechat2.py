@@ -11,7 +11,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 fh.setFormatter(formatter)
 
 itchat.auto_login()
-author = itchat.search_chatrooms(name='琪琪快乐买货宝')
+author = itchat.search_chatrooms(name='【禁言】补货通知群')
 if len(author) > 0:
     room = author[0]
 else:
@@ -28,6 +28,8 @@ def callback(ch, method, properties, body):
 
 def worker():
     # 监听数据
+    logger.info('listening...')
+
     channel = mq.connection.channel()
     channel.queue_declare('miffy_queue')
     # channel.basic_consume(queue='miffy_queue', on_message_callback=callback, auto_ack=False)
