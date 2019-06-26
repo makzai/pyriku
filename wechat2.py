@@ -30,7 +30,7 @@ def worker():
     # 监听数据
     logger.info('listening...')
 
-    channel = mq.connection.channel()
+    channel = mq.connection_init().channel()
     channel.queue_declare('miffy_queue')
     # channel.basic_consume(queue='miffy_queue', on_message_callback=callback, auto_ack=False)
     channel.basic_consume(queue='miffy_queue', on_message_callback=callback, auto_ack=True)  # 不放回

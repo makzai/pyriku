@@ -5,8 +5,6 @@ import logging
 import db
 import pytz
 import mq
-import json
-import jsonext
 
 # 根据SPU批量拉
 shop = 'sephora'
@@ -20,24 +18,19 @@ fh.setFormatter(formatter)
 
 tz = pytz.timezone("Asia/Shanghai")
 
-channel = mq.connection.channel()
-channel.queue_declare('miffy_queue')
-exchange = ''
-routing_key = 'miffy_queue'
 
-
-def get_data(spuCode):
+def get_data(spu_code):
     try:
-        r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spuCode, timeout=5)
+        r = requests.get("https://www.sephora.com/api/users/profiles/current/product/" + spu_code, timeout=5)
         # http状态
         if r.status_code != requests.codes.ok:
-            logger.error(spuCode+" request status code:%s" % r.status_code)
+            logger.error(spu_code+" request status code:%s" % r.status_code)
             return {}
 
         j = r.json()
         # 接口错误
         if 'errorCode' in j.keys():
-            logger.error(spuCode+" error code:%s" % j['errorCode'])
+            logger.error(spu_code+" error code:%s" % j['errorCode'])
             return {}
 
         return j
@@ -69,8 +62,7 @@ def worker():
                             if j['currentSku']['actionFlags']['isAddToBasket']:
                                 if s['stock'] == 0:
                                     # 突然有货
-                                    body = json.dumps(s, cls=jsonext.DateEncoder)
-                                    channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
+                                    mq.connect_and_send(s)
 
                                     now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                     db.cursor.execute(
@@ -92,8 +84,7 @@ def worker():
                                 if i['actionFlags']['isAddToBasket']:
                                     if s['stock'] == 0:
                                         # 突然有货
-                                        body = json.dumps(s, cls=jsonext.DateEncoder)
-                                        channel.basic_publish(exchange=exchange, routing_key=routing_key, body=body)
+                                        mq.connect_and_send(s)
 
                                         now = datetime.datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
                                         db.cursor.execute(
