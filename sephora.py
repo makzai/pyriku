@@ -50,6 +50,10 @@ def worker():
             j = get_data(spu_code)
             if len(j) == 0:
                 logger.info('err in ' + r['spu_code'])
+                # 下架商品置零
+                db.cursor.execute(
+                    "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND stock = 1" %
+                    (0, 0, shop, spu_code))
                 continue
             # print(j)
             db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
