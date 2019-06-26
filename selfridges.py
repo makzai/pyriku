@@ -86,7 +86,7 @@ def worker():
                                 (0, 0, shop, spu_code, s['sku_code']))
 
     global timer
-    timer = threading.Timer(60*10, worker)
+    timer = threading.Timer(60*3, worker)
     timer.start()
 
 

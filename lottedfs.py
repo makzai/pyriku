@@ -1,17 +1,21 @@
 import urllib.request
 import urllib.parse
 from bs4 import BeautifulSoup
+import datetime
+import threading
+import logging
+import db
+import mq
 
+# 根据SKU拉
+shop = 'lottedfs'
 
-def main():
-    p = input('prdOptNo: ')
-    prdNo = '10003094505'
-    # prdOptNo = '10003094505'
-    prdOptNo = p
-    if scan(prdNo, prdOptNo):
-        print('有料')
-    else:
-        print('冇料')
+logger = logging.getLogger(shop)
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('./log/info.log')
+logger.addHandler(fh)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
 
 
 def scan(prdNo, prdOptNo):
@@ -29,5 +33,36 @@ def scan(prdNo, prdOptNo):
     return False
 
 
-if __name__ == '__main__':
-    main()
+def worker():
+    logger.info('working...')
+    db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' GROUP BY spu_code" % shop)
+    if db.cursor.rowcount > 0:
+        products = db.cursor.fetchall()
+        for r in products:
+            spu_code = r['spu_code']
+            logger.info('handling...' + r['spu_code'])
+            db.cursor.execute("SELECT * FROM products WHERE shop_name = '%s' AND spu_code = '%s'" % (shop, spu_code))
+            if db.cursor.rowcount > 0:
+                skus = db.cursor.fetchall()
+                for s in skus:
+                    if scan(s['spu_code'], s['sku_code']):
+                        if s['stock'] == 0:
+                            # 突然有货
+                            mq.connect_and_send(s)
+
+                            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            db.cursor.execute(
+                                "UPDATE products SET stock = '%s', last_stock_time = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                (1, now, shop, spu_code, s['sku_code']))
+                    else:
+                        if s['stock'] == 1:
+                            db.cursor.execute(
+                                "UPDATE products SET value = '%s', stock = '%s' WHERE shop_name = '%s' AND spu_code = '%s' AND sku_code = '%s'" %
+                                (0, 0, shop, spu_code, s['sku_code']))
+
+    global timer
+    timer = threading.Timer(60*3, worker)
+    timer.start()
+
+
+worker()
